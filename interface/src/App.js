@@ -67,47 +67,38 @@ function App() {
     setViewMode('detail');
   };
 
-  const handleBackToGrid = () => {
-    setSelectedNoteId(null);
-    setViewMode('grid');
+  const handleFileUpload = (file) => {
+    console.log('File uploaded to app:', file);
+    // Handle file upload logic here
   };
 
-  const selectedNote = notes.find(note => note.id === selectedNoteId);
+  const selectedNote = selectedNoteId 
+    ? notes.find(note => note.id === selectedNoteId)
+    : notes[0]; // Default to first note
 
   return (
     <div className="App">
       {/* Header */}
       <header className="App-header">
         <div className="header-content">
-          <div className="header-left">
-            {viewMode === 'detail' && (
-              <button className="back-btn" onClick={handleBackToGrid}>
-                ← Back
-              </button>
-            )}
-            <h1 className="app-title">UNotes</h1>
+          <h1 className="app-title">UNotes</h1>
+          <div className="header-icons">
+            <button className="header-icon-btn" title="Library">
+              📚
+            </button>
+            <button className="header-icon-btn" title="Download">
+              ⬇️
+            </button>
           </div>
-          <p className="app-subtitle">
-            {viewMode === 'grid' 
-              ? `${notes.length} notes in your collection` 
-              : 'Editing note'}
-          </p>
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* Main Content - Two Panel Layout */}
       <main className="App-main">
-        {viewMode === 'grid' ? (
-          <View
-            notes={notes}
-            onAddNote={handleAddNote}
-            onDeleteNote={handleDeleteNote}
-            onSaveNote={handleSaveNote}
-            onSelectNote={handleSelectNote}
-          />
-        ) : (
-          selectedNote && (
-            <div className="note-detail-container">
+        <div className="two-panel-layout">
+          {/* Left Panel - Note Display */}
+          <div className="left-panel">
+            {selectedNote && (
               <Note
                 id={selectedNote.id}
                 title={selectedNote.title}
@@ -116,15 +107,15 @@ function App() {
                 onSave={handleSaveNote}
                 onDelete={handleDeleteNote}
               />
-            </div>
-          )
-        )}
-      </main>
+            )}
+          </div>
 
-      {/* Footer */}
-      <footer className="App-footer">
-        <p>© 2025 UNotes - Your smart note-taking companion</p>
-      </footer>
+          {/* Right Panel - Upload Document */}
+          <div className="right-panel">
+            <View onFileUpload={handleFileUpload} />
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

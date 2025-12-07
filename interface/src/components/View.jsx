@@ -1,146 +1,91 @@
 import React, { useState } from 'react';
 import './view.css';
 
-const View = ({ 
-  notes = [],
-  onAddNote,
-  onDeleteNote,
-  onSaveNote,
-  onSelectNote
-}) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterTag, setFilterTag] = useState('all');
+const View = ({ onFileUpload }) => {
+  const [dragActive, setDragActive] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState(null);
 
-  // Filter notes based on search and tag
-  const filteredNotes = notes.filter(note => {
-    const matchesSearch = note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         note.content.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTag = filterTag === 'all' || note.tags?.includes(filterTag);
-    return matchesSearch && matchesTag;
-  });
-
-  const handleAddNote = () => {
-    if (onAddNote) {
-      onAddNote();
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
     }
   };
 
-  // Get all unique tags from notes
-  const allTags = [...new Set(notes.flatMap(note => note.tags || []))];
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileInput = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      handleFile(e.target.files[0]);
+    }
+  };
+
+  const handleFile = (file) => {
+    setUploadedFile(file);
+    if (onFileUpload) {
+      onFileUpload(file);
+    }
+    console.log('File uploaded:', file.name);
+  };
 
   return (
-    <div className="view-container">
-      {/* Header Section */}
-      <div className="view-header">
-        <h2 className="view-title">My Notes</h2>
-        <button className="add-note-btn" onClick={handleAddNote}>
-          <span className="add-icon">+</span>
-          New Note
-        </button>
-      </div>
-
-      {/* Search and Filter Section */}
-      <div className="view-controls">
-        <div className="search-bar">
-          <span className="search-icon">🔍</span>
-          <input
-            type="text"
-            placeholder="Search notes..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
-          />
+    <div 
+      className={`upload-container ${dragActive ? 'drag-active' : ''}`}
+      onDragEnter={handleDrag}
+      onDragLeave={handleDrag}
+      onDragOver={handleDrag}
+      onDrop={handleDrop}
+    >
+      <div className="upload-content">
+        <div className="upload-icon">
+          <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
         </div>
-
-        <div className="filter-tags">
-          <button 
-            className={`tag-filter ${filterTag === 'all' ? 'active' : ''}`}
-            onClick={() => setFilterTag('all')}
-          >
-            All
-          </button>
-          {allTags.map(tag => (
+        
+        <h3 className="upload-title">Upload Document</h3>
+        
+        {uploadedFile ? (
+          <div className="uploaded-file-info">
+            <p className="file-name">📄 {uploadedFile.name}</p>
+            <p className="file-size">{(uploadedFile.size / 1024).toFixed(2)} KB</p>
             <button 
-              key={tag}
-              className={`tag-filter ${filterTag === tag ? 'active' : ''}`}
-              onClick={() => setFilterTag(tag)}
+              className="remove-file-btn"
+              onClick={() => setUploadedFile(null)}
             >
-              {tag}
+              Remove
             </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Notes Grid */}
-      <div className="notes-grid">
-        {filteredNotes.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">📝</div>
-            <h3>No notes found</h3>
-            <p>Create your first note to get started!</p>
           </div>
         ) : (
-          filteredNotes.map(note => (
-            <div 
-              key={note.id} 
-              className="note-preview-card"
-              onClick={() => onSelectNote && onSelectNote(note.id)}
-            >
-              <div className="note-preview-header">
-                <h3 className="note-preview-title">{note.title}</h3>
-                <div className="note-preview-actions">
-                  <button 
-                    className="note-preview-btn edit-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectNote && onSelectNote(note.id);
-                    }}
-                    title="Edit"
-                  >
-                    ✎
-                  </button>
-                  <button 
-                    className="note-preview-btn delete-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (window.confirm('Delete this note?')) {
-                        onDeleteNote && onDeleteNote(note.id);
-                      }
-                    }}
-                    title="Delete"
-                  >
-                    🗑
-                  </button>
-                </div>
-              </div>
-
-              <div className="note-preview-date">{note.date}</div>
-
-              <div className="note-preview-content">
-                {note.content.substring(0, 150)}
-                {note.content.length > 150 && '...'}
-              </div>
-
-              {note.tags && note.tags.length > 0 && (
-                <div className="note-preview-tags">
-                  {note.tags.map((tag, index) => (
-                    <span key={index} className="note-preview-tag">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))
+          <>
+            <p className="upload-subtitle">Drag and drop your files here</p>
+            
+            <label className="upload-btn-label">
+              <input
+                type="file"
+                className="file-input"
+                onChange={handleFileInput}
+                accept=".pdf,.doc,.docx,.txt,.md"
+              />
+              <span className="upload-btn">Choose File</span>
+            </label>
+            
+            
+          </>
         )}
-      </div>
-
-      {/* Stats Footer */}
-      <div className="view-footer">
-        <span className="note-count">
-          {filteredNotes.length} {filteredNotes.length === 1 ? 'note' : 'notes'}
-          {searchQuery && ' found'}
-        </span>
       </div>
     </div>
   );
