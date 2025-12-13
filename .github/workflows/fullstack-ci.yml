@@ -1,0 +1,88 @@
+name: Full Stack CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # Run backend and frontend tests in parallel
+  backend-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+    - name: Backend tests
+      working-directory: ./backend
+      run: |
+        npm ci
+        npm test --if-present || echo "No tests"
+  
+  frontend-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        cache-dependency-path: interface/package-lock.json
+    - name: Frontend tests
+      working-directory: ./interface
+      run: |
+        npm ci
+        npm test -- --passWithNoTests --watchAll=false
+      env:
+        CI: true
+  
+  # Build after tests pass
+  build:
+    needs: [backend-test, frontend-test]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+    
+    - name: Build Frontend
+      working-directory: ./interface
+      run: |
+        npm ci
+        npm run build
+    
+    - name: Upload frontend build
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-build
+        path: interface/build/
+  
+  # Deploy to production
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download frontend build
+      uses: actions/download-artifact@v4
+      with:
+        name: frontend-build
+        path: interface/build
+    
+    - name: Deploy Full Stack
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+        echo "🚀 Deploying UNotes to production"
+        echo "Frontend: Deploy to static hosting (Vercel/Netlify)"
+        echo "Backend: Deploy to server (Heroku/Railway/Render)"

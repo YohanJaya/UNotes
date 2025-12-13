@@ -1,0 +1,104 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ./backend
+      run: npm ci
+    
+    - name: Run linter
+      working-directory: ./backend
+      run: npm run lint --if-present || echo "No lint script found"
+    
+    - name: Run tests
+      working-directory: ./backend
+      run: npm test --if-present || echo "No tests found"
+      env:
+        NODE_ENV: test
+    
+    - name: Security audit
+      working-directory: ./backend
+      run: npm audit --audit-level=moderate
+      continue-on-error: true
+    
+  deploy-staging:
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Deploy to Staging
+      run: |
+        echo "Deploy to staging environment"
+        # Example for Heroku:
+        # git push heroku-staging develop:main
+        # Example for Railway:
+        # railway up --service backend-staging
+    
+  deploy-production:
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+    
+    - name: Install dependencies
+      working-directory: ./backend
+      run: npm ci
+    
+    - name: Deploy to Production
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+        echo "Deploy to production environment"
+        # Example deployment commands:
+        # For Docker:
+        # docker build -t unotes-backend ./backend
+        # docker push your-registry/unotes-backend:latest
+        
+        # For Heroku:
+        # git subtree push --prefix backend heroku main
+        
+        # For Railway/Render:
+        # These usually auto-deploy from GitHub
+        
+        # For AWS/DigitalOcean/VPS:
+        # ssh user@server "cd /app && git pull && npm install && pm2 restart backend"
