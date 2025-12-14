@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import './uploadDoc.css';
 
-function UploadDoc({ onSlideSelect }) {
+function UploadDoc({ onSlideSelect, onTextSelect }) {
 
   // ✅ State
   const [uploading, setUploading] = useState(false);
   const [selectedSlide, setSelectedSlide] = useState(null);
+  const [highlightedText, setHighlightedText] = useState('');
 
   // ✅ Function to select a slide and notify parent
   const selectSlide = (slideData) => {
@@ -15,6 +16,22 @@ function UploadDoc({ onSlideSelect }) {
     // Notify parent component (App.jsx)
     if (onSlideSelect) {
       onSlideSelect(slideData);
+    }
+  };
+
+  // ✅ Function to handle text selection from document
+  const handleTextSelection = () => {
+    const selectedText = window.getSelection().toString().trim();
+    if (selectedText && onTextSelect) {
+      // Automatically send to AI prompt
+      onTextSelect(selectedText);
+      setHighlightedText(selectedText);
+      
+      // Clear highlighted text after a short delay
+      setTimeout(() => {
+        setHighlightedText('');
+        window.getSelection().removeAllRanges();
+      }, 2000);
     }
   };
 
@@ -102,7 +119,10 @@ function UploadDoc({ onSlideSelect }) {
             </div>
 
             {selectedSlide.url && (
-              <div className="doc-preview">
+              <div 
+                className="doc-preview"
+                onMouseUp={handleTextSelection}
+              >
                 <p><strong>Preview:</strong></p>
                 {selectedSlide.type.includes('pdf') ? (
                   <embed 
@@ -123,6 +143,19 @@ function UploadDoc({ onSlideSelect }) {
               </div>
             )}
           </div>
+
+          {/* Show confirmation when text is highlighted */}
+          {highlightedText && (
+            <div className="highlighted-text-section">
+              <div className="highlight-notification">
+                <span className="notification-icon">✅</span>
+                <div className="notification-content">
+                  <p className="notification-title">Text copied to AI prompt!</p>
+                  <p className="highlighted-content">"{highlightedText}"</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <button 
             className="remove-doc-btn"

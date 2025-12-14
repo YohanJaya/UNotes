@@ -18,6 +18,11 @@ function App() {
     // when selectedSlide changes - no need to manually set prompt
   };
 
+  // ✅ Called when text is selected from document
+  const handleTextSelect = (text) => {
+    setAiPrompt(text);
+  };
+
   // ✅ Notes update
   const updateNotes = (updatedNotes) => {
     setNotes(updatedNotes);
@@ -37,7 +42,10 @@ function App() {
 
         {/* Right Panel */}
         <div className="right-panel">
-          <UploadDoc onSlideSelect={handleSlideSelect} />
+          <UploadDoc 
+            onSlideSelect={handleSlideSelect}
+            onTextSelect={handleTextSelect}
+          />
 
           <AI
             aiPrompt={aiPrompt}
