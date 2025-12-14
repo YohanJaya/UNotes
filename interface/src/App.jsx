@@ -5,11 +5,22 @@ import UploadDoc from './components/uploadDoc';
 import './App.css';
 
 function App() {
-  const [aiPrompt, setAiPrompt] = useState('');
 
-  // Function to send automatic prompt to AI
-  const sendPromptToAI = (prompt) => {
-    setAiPrompt(prompt);
+  // ✅ State
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [notes, setNotes] = useState([]);
+  const [selectedSlide, setSelectedSlide] = useState(null);
+
+  // ✅ Called when a slide/file is selected
+  const handleSlideSelect = (slide) => {
+    setSelectedSlide(slide);
+    // Note: AI component will automatically trigger AUTO_MODE
+    // when selectedSlide changes - no need to manually set prompt
+  };
+
+  // ✅ Notes update
+  const updateNotes = (updatedNotes) => {
+    setNotes(updatedNotes);
   };
 
   return (
@@ -17,24 +28,22 @@ function App() {
       <header className="app-header">
         <h1># UNotes</h1>
       </header>
-      
+
       <main className="main-content-grid">
-        {/* Left Panel - Notes */}
+        {/* Left Panel */}
         <div className="left-panel">
-          <NoteTaking onSlideChange={sendPromptToAI} />
+          <NoteTaking onNotesUpdate={updateNotes} />
         </div>
 
-        {/* Right Panel - Upload Document and AI */}
+        {/* Right Panel */}
         <div className="right-panel">
-          {/* Upload Document Section */}
-          <div className="upload-section">
-            <UploadDoc />
-          </div>
+          <UploadDoc onSlideSelect={handleSlideSelect} />
 
-          {/* AI Assistant Section */}
-          <div className="ai-section">
-            <AI aiPrompt={aiPrompt} />
-          </div>
+          <AI
+            aiPrompt={aiPrompt}
+            notes={notes}
+            selectedSlide={selectedSlide}
+          />
         </div>
       </main>
     </div>

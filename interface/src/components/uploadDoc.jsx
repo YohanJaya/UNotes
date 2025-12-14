@@ -1,110 +1,137 @@
 import React, { useState } from 'react';
 import './uploadDoc.css';
 
-function UploadDoc() {
-  const [file, setFile] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState([
-    { id: 1, name: 'Sensor_Notes.pdf', size: '2.4 MB', date: '2024-01-15' },
-    { id: 2, name: 'Camera_Specs.docx', size: '1.8 MB', date: '2024-01-14' },
-    { id: 3, name: 'Robot_Sensors.jpg', size: '3.2 MB', date: '2024-01-13' }
-  ]);
+function UploadDoc({ onSlideSelect }) {
 
-  const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (selectedFile) {
-      setFile(selectedFile);
+  // ✅ State
+  const [uploading, setUploading] = useState(false);
+  const [selectedSlide, setSelectedSlide] = useState(null);
+
+  // ✅ Function to select a slide and notify parent
+  const selectSlide = (slideData) => {
+    // Update local state
+    setSelectedSlide(slideData);
+    
+    // Notify parent component (App.jsx)
+    if (onSlideSelect) {
+      onSlideSelect(slideData);
     }
   };
 
-  const handleUpload = () => {
-    if (!file) return;
-
-    setUploading(true);
+  // ✅ Combined file selection and upload function
+  const fileUpload = (e) => {
+    const selectedFile = e.target.files[0];
     
-    // Simulate upload
+    if (!selectedFile) return;  // Do nothing if no file selected
+
+    setUploading(true);  // Start upload simulation
+
     setTimeout(() => {
-      const newFile = {
+      // Create slide data structure from uploaded file
+      const slideData = {
         id: Date.now(),
-        name: file.name,
-        size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-        date: new Date().toISOString().split('T')[0]
+        name: selectedFile.name,
+        size: `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`,
+        type: selectedFile.type,
+        url: URL.createObjectURL(selectedFile),  // Create preview URL
+        file: selectedFile
       };
-      
-      setUploadedFiles([newFile, ...uploadedFiles]);
-      setFile(null);
+
+      // Use selectSlide function to handle selection
+      selectSlide(slideData);
+
+      // Reset upload state
       setUploading(false);
       
       // Reset file input
-      document.getElementById('file-input').value = '';
+      e.target.value = '';
     }, 1500);
   };
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile) {
-      setFile(droppedFile);
-    }
-  };
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
 
   return (
     <div className="upload-container">
       <div className="upload-header">
-        <h2>📤 Upload Document</h2>
-        <p>Upload documents for AI analysis and note integration</p>
+        <h2>Upload Slide</h2>
+        <p>Upload a slide to get AI explanation</p>
       </div>
 
-      <div 
-        className="upload-area"
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-      >
-        <div className="upload-icon">
-          📄
-        </div>
-        <h3>Drag & Drop your files here</h3>
-        <p className="upload-subtitle">or click to browse files</p>
-        
-        <input
-          type="file"
-          id="file-input"
-          onChange={handleFileChange}
-          className="file-input"
-        />
-        <label htmlFor="file-input" className="browse-btn">
-          Browse Files
-        </label>
+      {!selectedSlide && (
+        <div className="upload-area">
+          <input
+            type="file"
+            id="file-input"
+            onChange={fileUpload}
+            className="file-input"
+            disabled={uploading}
+          />
 
-        <p className="file-types">Supported: PDF, DOCX, TXT, JPG, PNG (Max 10MB)</p>
+          <label 
+            htmlFor="file-input" 
+            className={`browse-btn ${uploading ? 'uploading' : ''}`}
+          >
+            {uploading ? 'Uploading...' : 'Browse & Upload'}
+          </label>
 
-        {file && (
-          <div className="selected-file">
-            <span className="file-icon">📎</span>
-            <span className="file-name">{file.name}</span>
-            <span className="file-size">({(file.size / (1024 * 1024)).toFixed(1)} MB)</span>
-          </div>
-        )}
-
-        <button 
-          onClick={handleUpload}
-          disabled={!file || uploading}
-          className={`upload-btn ${uploading ? 'uploading' : ''}`}
-        >
-          {uploading ? (
-            <>
-              <span className="spinner"></span>
-              Uploading...
-            </>
-          ) : (
-            'Upload Document'
+          {uploading && (
+            <div className="uploading-message">
+              <span>⏳ Processing your file...</span>
+            </div>
           )}
-        </button>
-      </div>
+        </div>
+      )}
+
+      {selectedSlide && (
+        <div className="uploaded-doc-section">
+          <div className="doc-header">
+            <h3>📄 Uploaded Document</h3>
+          </div>
+          
+          <div className="doc-details">
+            <div className="doc-info">
+              <p className="doc-name">
+                <strong>Name:</strong> {selectedSlide.name}
+              </p>
+              <p className="doc-size">
+                <strong>Size:</strong> {selectedSlide.size}
+              </p>
+              <p className="doc-type">
+                <strong>Type:</strong> {selectedSlide.type}
+              </p>
+            </div>
+
+            {selectedSlide.url && (
+              <div className="doc-preview">
+                <p><strong>Preview:</strong></p>
+                {selectedSlide.type.includes('pdf') ? (
+                  <embed 
+                    src={selectedSlide.url} 
+                    type="application/pdf" 
+                    width="100%" 
+                    height="400px"
+                  />
+                ) : selectedSlide.type.includes('image') ? (
+                  <img 
+                    src={selectedSlide.url} 
+                    alt={selectedSlide.name}
+                    style={{ maxWidth: '100%', maxHeight: '400px' }}
+                  />
+                ) : (
+                  <p className="no-preview">Preview not available for this file type</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <button 
+            className="remove-doc-btn"
+            onClick={() => selectSlide(null)}
+          >
+            ❌ Remove Document
+          </button>
+        </div>
+      )}
     </div>
   );
 }
