@@ -1,76 +1,140 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './ai.css';
 
-function AI() {
+function AI({
+  notes = [],
+  aiPrompt = '',
+  autoSubmit = false,
+  onAutoSent = () => {}
+}) {
   const [question, setQuestion] = useState('');
   const [messages, setMessages] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
+  // Scroll chat to the latest message
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
+  // Fill input when aiPrompt arrives (highlighted text). NOT SENDING YET. JUST PRE FILLING
+  useEffect(() => {
+    if (aiPrompt) {
+      setQuestion(aiPrompt);
+    }
+  }, [aiPrompt]);
+
+  //  AUTO-SEND ONLY FOR HIGHLIGHTED TEXT
+  useEffect(() => {
+    if (aiPrompt && autoSubmit && !isLoading) {
+      const timer = setTimeout(() => {
+        sendQuery(aiPrompt);
+        onAutoSent(); // reset flag in parent
+      }, 300);
+
+      return () => clearTimeout(timer);
+    }
+  }, [aiPrompt, autoSubmit]);
+
+  const sendQuery = async (userQuestion) => {
+    if (!userQuestion.trim() || isLoading) return;
+
+    setMessages(prev => [
+      ...prev,
+      {
+        id: Date.now(),
+        text: userQuestion,
+        isAI: false
+      }
+    ]);
+
+    setIsLoading(true);
+    setQuestion('');
+
+    try {
+      const response = await fetch('http://localhost:5000/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question: userQuestion,
+          notes: notes
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessages(prev => [
+          ...prev,
+          {
+            id: Date.now() + 1,
+            text: data.response,
+            isAI: true
+          }
+        ]);
+      } else {
+        throw new Error(data.error || 'Unknown error');
+      }
+    } catch (error) {
+      setMessages(prev => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          text: '❌ Unable to connect to AI server.',
+          isAI: true
+        }
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!question.trim()) return;
-
-    // Add user message
-    setMessages(prev => [...prev, { id: Date.now(), text: question, isAI: false }]);
-
-    // Simulate AI response
-    setTimeout(() => {
-      setMessages(prev => [...prev, { 
-        id: Date.now() + 1, 
-        text: `I understand you're asking about "${question}". Based on your notes about sensors, I can provide detailed information about distance sensors, cameras, and ground sensors. Would you like me to elaborate on any specific type?`, 
-        isAI: true 
-      }]);
-    }, 1000);
-
-    setQuestion('');
+    sendQuery(question);
   };
 
   return (
     <div className="ai-container">
       <div className="ai-header">
         <h2>🤖 Ask AI Assistant</h2>
-        <p>Get intelligent insights about your notes and documents</p>
+        <p>Triggered only when you highlight text or ask manually</p>
       </div>
 
       <div className="chat-container">
         {messages.length === 0 ? (
           <div className="empty-chat">
-            <div className="centered-input">
-              <form onSubmit={handleSubmit} className="question-form centered">
-                <input
-                  type="text"
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="Ask me anything about your notes..."
-                  className="question-input"
-                  autoFocus
-                />
-                <button type="submit" className="ask-button">
-                  <span className="button-text">Ask AI</span>
-                  <span className="button-icon">🚀</span>
-                </button>
-              </form>
-            </div>
+            <form onSubmit={handleSubmit} className="question-form centered">
+              <input
+                type="text"
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                placeholder="Highlight text or ask a question..."
+                className="question-input"
+                disabled={isLoading}
+                autoFocus
+              />
+              <button className="ask-button" disabled={isLoading}>
+                {isLoading ? '⏳' : '🚀 Ask AI'}
+              </button>
+            </form>
           </div>
         ) : (
           <>
             <div className="messages">
               {messages.map(msg => (
-                <div key={msg.id} className={`message ${msg.isAI ? 'ai-message' : 'user-message'}`}>
+                <div
+                  key={msg.id}
+                  className={`message ${msg.isAI ? 'ai-message' : 'user-message'}`}
+                >
                   <div className="message-avatar">
                     {msg.isAI ? '🤖' : '👤'}
                   </div>
-                  <div className="message-content">
-                    {msg.text}
-                  </div>
+                  <div className="message-content">{msg.text}</div>
                 </div>
               ))}
               <div ref={messagesEndRef} />
@@ -83,10 +147,10 @@ function AI() {
                 onChange={(e) => setQuestion(e.target.value)}
                 placeholder="Type your question..."
                 className="question-input"
+                disabled={isLoading}
               />
-              <button type="submit" className="ask-button">
-                <span className="button-text">Ask AI</span>
-                <span className="button-icon">🚀</span>
+              <button className="ask-button" disabled={isLoading}>
+                {isLoading ? '⏳' : '🚀 Ask AI'}
               </button>
             </form>
           </>

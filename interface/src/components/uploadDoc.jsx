@@ -8,16 +8,16 @@ function UploadDoc({ onSlideSelect, onTextSelect }) {
   const [selectedSlide, setSelectedSlide] = useState(null);
   const [highlightedText, setHighlightedText] = useState('');
 
-  // ✅ Function to select a slide and notify parent
-  const selectSlide = (slideData) => {
-    // Update local state
-    setSelectedSlide(slideData);
+  // // ✅ Function to select a slide and notify parent
+  // const selectSlide = (slideData) => {
+  //   // Update local state
+  //   setSelectedSlide(slideData);
     
-    // Notify parent component (App.jsx)
-    if (onSlideSelect) {
-      onSlideSelect(slideData);
-    }
-  };
+  //   // Notify parent component (App.jsx)
+  //   if (onSlideSelect) {
+  //     onSlideSelect(slideData);
+  //   }
+  // };
 
   // ✅ Function to handle text selection from document
   const handleTextSelection = () => {
