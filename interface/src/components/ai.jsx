@@ -5,7 +5,9 @@ function AI({
   notes = [],
   aiPrompt = '',
   autoSubmit = false,
-  onAutoSent = () => {}
+  onAutoSent = () => {},
+  highlightedText = null,
+  slideName = null
 }) {
   const [question, setQuestion] = useState('');
   const [messages, setMessages] = useState([]);
@@ -21,22 +23,19 @@ function AI({
     scrollToBottom();
   }, [messages]);
 
-  // Fill input when aiPrompt arrives (highlighted text). NOT SENDING YET. JUST PRE FILLING
+  // Fill input when aiPrompt arrives (highlighted text) and auto-send if needed
   useEffect(() => {
     if (aiPrompt) {
-      setQuestion(aiPrompt);
-    }
-  }, [aiPrompt]);
-
-  //  AUTO-SEND ONLY FOR HIGHLIGHTED TEXT
-  useEffect(() => {
-    if (aiPrompt && autoSubmit && !isLoading) {
-      const timer = setTimeout(() => {
-        sendQuery(aiPrompt);
-        onAutoSent(); // reset flag in parent
-      }, 300);
-
-      return () => clearTimeout(timer);
+      // Use handleManualPrompt to handle both prefill and auto-submit logic
+      if (autoSubmit && !isLoading) {
+        const timer = setTimeout(() => {
+          handleManualPrompt(aiPrompt);
+        }, 300);
+        return () => clearTimeout(timer);
+      } else {
+        // Just prefill without auto-submit
+        setQuestion(aiPrompt);
+      }
     }
   }, [aiPrompt, autoSubmit]);
 
@@ -60,8 +59,11 @@ function AI({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          question: userQuestion,
-          notes: notes
+          userQuestion: userQuestion,
+          question: userQuestion, // legacy support
+          notes: notes,
+          highlightedText: highlightedText,
+          slideName: slideName
         })
       });
 
@@ -97,6 +99,19 @@ function AI({
     e.preventDefault();
     sendQuery(question);
   };
+
+  const handleManualPrompt = (manualPrompt) => {
+    // Prefill the input
+    setQuestion(manualPrompt || '');
+
+    // If autoSubmit is enabled, send immediately (and notify parent)
+    if (manualPrompt && autoSubmit && !isLoading) {
+      sendQuery(manualPrompt);
+      onAutoSent();
+    }
+  };
+
+  
 
   return (
     <div className="ai-container">
