@@ -1,8 +1,35 @@
+# HOW DOES THE WORKFLOW KNOW WHICH TEST FILES TO RUN?
+      # ====================================================
+      # 1. "npm test" runs the "test" script from package.json
+      # 2. package.json has: "test": "react-scripts test"
+      # 3. react-scripts test uses Jest (built into Create React App)
+      # 4. Jest automatically finds ALL files matching these patterns:
+      #    - Files ending in .test.js (like App.test.js)
+      #    - Files ending in .spec.js
+      #    - Files inside __tests__ folders
+      # 5. So App.test.js is found and run automatically by Jest
+      # 
+      # No explicit configuration needed - Jest finds tests by naming convention!
+
+# ============================================================================
+# GITHUB ACTIONS KEYWORDS REFERENCE
+# ============================================================================
+# Keyword   | Purpose                        | Example
+# ----------|--------------------------------|----------------------------------
+# uses      | Run a pre-built action         | uses: actions/checkout@v4
+# run       | Run your own shell commands    | run: npm ci
+# with      | Pass parameters to an action   | with: node-version: 18.x
+# ============================================================================
+
+
+
+
 name: Frontend CI/CD
+
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main]
     paths:
       - 'interface/**'
       - '.github/workflows/frontend-ci.yml'
@@ -25,7 +52,7 @@ jobs:
     
     - name: Setup Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
-      with:
+      with: 
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
         cache-dependency-path: interface/package-lock.json
@@ -44,55 +71,8 @@ jobs:
       env:
         CI: true
     
-    - name: Build production
+    - name: build frontend
       working-directory: ./interface
       run: npm run build
-    
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: frontend-build-${{ matrix.node-version }}
-        path: interface/build/
-        retention-days: 7
-    
-  deploy-preview:
-    needs: test-and-build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: frontend-build-20.x
-        path: interface/build
-    
-    - name: Deploy to Preview Environment
-      run: |
-        echo "Deploy to preview environment (e.g., Vercel, Netlify)"
-        echo "PR #${{ github.event.pull_request.number }}"
-    
-  deploy-production:
-    needs: test-and-build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: frontend-build-20.x
-        path: interface/build
-    
-    - name: Deploy to Production
-      run: |
-        echo "Deploy to production environment"
-        # Add your deployment commands here
-        # Example for Vercel: npx vercel --prod --token=${{ secrets.VERCEL_TOKEN }}
-        # Example for Netlify: npx netlify-cli deploy --prod --dir=interface/build --auth=${{ secrets.NETLIFY_TOKEN }}
+
+      
