@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './ai.css';
 
 function AI({
@@ -23,24 +23,20 @@ function AI({
     scrollToBottom();
   }, [messages]);
 
-  // Fill input when aiPrompt arrives (highlighted text) and auto-send if needed
-  useEffect(() => {
-    if (aiPrompt) {
-      // Use handleManualPrompt to handle both prefill and auto-submit logic
-      if (autoSubmit && !isLoading) {
-        const timer = setTimeout(() => {
-          handleManualPrompt(aiPrompt);
-        }, 300);
-        return () => clearTimeout(timer);
-      } else {
-        // Just prefill without auto-submit
-        setQuestion(aiPrompt);
-      }
+  const sendQuery = useCallback(async (userQuestion) => {
+    console.log('💬 sendQuery called with:', userQuestion);
+    
+    if (!userQuestion.trim() || isLoading) {
+      console.log('⚠️ sendQuery skipped - empty question or already loading');
+      return;
     }
-  }, [aiPrompt, autoSubmit]);
 
-  const sendQuery = async (userQuestion) => {
-    if (!userQuestion.trim() || isLoading) return;
+    console.log('📨 Sending to backend:', {
+      userQuestion,
+      notesCount: notes.length,
+      highlightedText,
+      slideName
+    });
 
     setMessages(prev => [
       ...prev,
@@ -66,6 +62,8 @@ function AI({
           slideName: slideName
         })
       });
+
+      console.log('📥 Response status:', response.status);
 
       const data = await response.json();
 
@@ -93,25 +91,49 @@ function AI({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isLoading, notes, highlightedText, slideName]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     sendQuery(question);
   };
 
-  const handleManualPrompt = (manualPrompt) => {
+  const handleManualPrompt = useCallback((manualPrompt) => {
+    console.log('🎤 handleManualPrompt called with:', manualPrompt);
+    
     // Prefill the input
     setQuestion(manualPrompt || '');
 
     // If autoSubmit is enabled, send immediately (and notify parent)
     if (manualPrompt && autoSubmit && !isLoading) {
+      console.log('✅ Auto-submit conditions met - calling sendQuery');
       sendQuery(manualPrompt);
       onAutoSent();
+    } else {
+      console.log('⚠️ Auto-submit skipped:', { hasPrompt: !!manualPrompt, autoSubmit, isLoading });
     }
-  };
+  }, [autoSubmit, isLoading, sendQuery, onAutoSent]);
 
-  
+  // Fill input when aiPrompt arrives (highlighted text) and auto-send if needed
+  useEffect(() => {
+    console.log('🤖 AI useEffect triggered:', { aiPrompt, autoSubmit, isLoading });
+    
+    if (aiPrompt) {
+      // Use handleManualPrompt to handle both prefill and auto-submit logic
+      if (autoSubmit && !isLoading) {
+        console.log('⏰ Setting 300ms timer for auto-submit');
+        const timer = setTimeout(() => {
+          console.log('🚀 Timer fired - calling handleManualPrompt');
+          handleManualPrompt(aiPrompt);
+        }, 300);
+        return () => clearTimeout(timer);
+      } else {
+        // Just prefill without auto-submit
+        console.log('📝 Just prefilling question input (no auto-submit)');
+        setQuestion(aiPrompt);
+      }
+    }
+  }, [aiPrompt, autoSubmit, isLoading, handleManualPrompt]);
 
   return (
     <div className="ai-container">

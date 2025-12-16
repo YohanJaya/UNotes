@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './note.css';
 
-function NoteTaking() {
+function NoteTaking({ onNotesUpdate }) {
   const [notes, setNotes] = useState([
     {
       id: 1,
@@ -23,6 +23,13 @@ function NoteTaking() {
     content: "",
     tags: ""
   });
+
+  // Update parent component whenever notes change
+  useEffect(() => {
+    if (onNotesUpdate) {
+      onNotesUpdate(notes);
+    }
+  }, [notes, onNotesUpdate]);
 
   const handleAddNote = () => {
     if (!newNote.title.trim() || !newNote.content.trim()) return;
